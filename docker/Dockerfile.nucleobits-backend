@@ -1,0 +1,12 @@
+FROM grpc-build-env AS nucleobits-backend 
+
+# Set the working directory in the build env
+WORKDIR /usr/src/nucleobits
+
+# Copy the source code into the build environmnet
+COPY . .
+
+# Build the nucleobits-backend
+RUN mkdir build && cd build \
+  && cmake .. -DCMAKE_BUILD_TYPE=Release \
+  && make all

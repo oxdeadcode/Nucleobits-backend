@@ -1,37 +1,15 @@
 # Use an official base image with C/C++ development
-FROM debian:latest AS nucleobits-backend-grpc
+FROM debian:latest
 
 # Install necessary packages and tools
 RUN apt-get update && apt-get install -y \
   build-essential autoconf libtool pkg-config \
   libgflags-dev libgtest-dev clang libc++-dev \
-  git cmake
+  git protobuf-compiler libprotobuf-dev
 
-# Setup
-ENV GRPC_INSTALL_DIR=.local
-RUN mkdir -p $GRPC_INSTALL_DIR
-ENV PATH="$GRPC_INSTALL_DIR/bin:$PATH"
-SHELL ["/bin/bash", "-c"]
+# Copy app directory over
+COPY ../ /nucleobits-backend
+WORKDIR /nucleobits-backend
 
-# Install Protobuf
-ARG PROTOBUF_VERSION=21.12
-RUN git clone --branch v$PROTOBUF_VERSION https://github.com/protocolbuffers/protobuf.git /protobuf \
-  && cd /protobuf \
-  && git submodule update --init --recursive \
-  && ./autogen.sh \
-  && ./configure \
-  && make -j4 \
-  && make install \
-  && ldconfig
+RUN ls -la
 
-# Clone the grpc repo and compile gRPC and Protocol Buffers
-RUN git clone --recurse-submodules -b v1.60.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc \
-  && cd grpc \
-  && mkdir -p cmake/build \
-  && pushd cmake/build \
-  && cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=$GRPC_INSTALL_DIR ../..\
-  && make -j 4 \
-  && make install
-
-FROM debian:latest
-COPY --from=nucleobits-backend-grpc /usr/local /usr/local

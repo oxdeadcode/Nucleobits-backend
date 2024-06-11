@@ -5,11 +5,33 @@ FROM debian:latest
 RUN apt-get update && apt-get install -y \
   build-essential autoconf libtool pkg-config \
   libgflags-dev libgtest-dev clang libc++-dev \
-  git protobuf-compiler libprotobuf-dev
+  git wget bash
+
+# General setup
+RUN /bin/bash
 
 # Copy app directory over
-COPY ../ /nucleobits-backend
+COPY . /nucleobits-backend
 WORKDIR /nucleobits-backend
 
-RUN ls -la
+# gRPC setup
+ENV GRPC_INSTALL_DIR=/nucleobits-backend/localgrpc
+RUN mkdir -p $GRPC_INSTALL_DIR
+ENV PATH="$GRPC_INSTALL_DIR/bin:$PATH"
 
+# Install cmake
+RUN wget -q -O cmake-linux.sh https://github.com/Kitware/CMake/releases/download/v3.19.6/cmake-3.19.6-Linux-x86_64.sh
+RUN sh cmake-linux.sh -- --skip-license --prefix=$GRPC_INSTALL_DIR
+RUN rm -rf cmake-linux.sh
+
+# Clone the grpc repo
+RUN git clone --recurse-submodules -b v1.64.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc
+
+# Build and install gRPC and Protocol Buffers
+RUN cd grpc
+RUN mkdir -p cmake/build
+RUN cd cmake/build
+RUN cmake -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=$GRPC_INSTALL_DIR /nucleobits-backend/grpc
+RUN make -j 4
+RUN make install
+RUN cd ../..

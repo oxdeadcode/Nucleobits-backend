@@ -12,7 +12,7 @@ DOCKER_DIR = ./docker
 docker-build-grpc:
 	@if [ -z "$$(docker images -q $(GRPC_IMAGE_NAME))" ]; then \
 		echo "Building gRPC Docker Image: $(GRPC_IMAGE_NAME)..."; \
-		docker build -f $(DOCKER_DIR)/Dockerfile.grpc -t $(GRPC_IMAGE_NAME) $(DOCKER_DIR); \
+		docker build --no-cache -f $(DOCKER_DIR)/Dockerfile.grpc -t $(GRPC_IMAGE_NAME) ..; \
 	else \
 		echo "gRPC Docker Image $(GRPC_IMAGE_NAME) already exists."; \
 	fi

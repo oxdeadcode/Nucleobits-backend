@@ -5,14 +5,14 @@
 # Docker ENV variables
 CONTAINER_NAME = nucleobits-backend-container
 IMAGE_NAME = nucleobits-backend-image
-GRPC_IMAGE_NAME = grpc-build-env
+GRPC_IMAGE_NAME = nucleobits-backend-grpc-image
 DOCKER_DIR = ./docker
 
 # Build GRPC and Protocol Buffers environment
 docker-build-grpc:
 	@if [ -z "$$(docker images -q $(GRPC_IMAGE_NAME))" ]; then \
 		echo "Building gRPC Docker Image: $(GRPC_IMAGE_NAME)..."; \
-		docker build -f $(DOCKER_DIR)/Dockerfile.grpc -t $(GRPC_IMAGE_NAME) $(DOCKER_DIR); \
+		docker build --no-cache -f $(DOCKER_DIR)/Dockerfile.grpc -t $(GRPC_IMAGE_NAME) ..; \
 	else \
 		echo "gRPC Docker Image $(GRPC_IMAGE_NAME) already exists."; \
 	fi
@@ -37,32 +37,30 @@ docker-run:
 
 # Clean the Docker container and images
 docker-clean:
-# Check if any containers based on the nucleobits-backend image are running and stop them
-	@if [ $$(docker ps -q --filter ancestor=$(IMAGE_NAME)) ]; then \
+	# Check if any containers based on the nucleobits-backend image are running and stop them
+	@if [ "$$(docker ps -q --filter ancestor=$(IMAGE_NAME))" ]; then \
 		docker ps -q --filter ancestor=$(IMAGE_NAME) | xargs -r docker stop; \
 	fi
 
-# Check if any containers based on the nucleobits-backend image exist and remove them
-	@if [ $$(docker ps -a -q --filter ancestor=$(IMAGE_NAME)) ]; then \
+	# Check if any containers based on the nucleobits-backend image exist and remove them
+	@if [ "$$(docker ps -a -q --filter ancestor=$(IMAGE_NAME))" ]; then \
 		docker ps -a -q --filter ancestor=$(IMAGE_NAME) | xargs -r docker rm; \
 	fi
 
-# Check if the nucleobits-backend image exists and remove it
-	@if [ $$(docker images -aq $(IMAGE_NAME)) ]; then \
+	# Check if the nucleobits-backend image exists and remove it
+	@if [ "$$(docker images -aq $(IMAGE_NAME))" ]; then \
 		docker rmi $(IMAGE_NAME); \
 	fi
 
-# Do the same for volumes
-	@if [$$(docker volume ls -q)]; then \
-		docker volume rm $(docker volume ls -q); \
+	# Do the same for volumes
+	@if [ "$$(docker volume ls -q)" ]; then \
+		docker volume rm $$(docker volume ls -q); \
 	fi
 
-# And networks
-	@if [$$(docker network ls -q)]; then \
-		docker network rm $(docker network ls -q); \
-	fi
+	# And networks, excluding pre-defined ones
+	#@docker network ls -q | grep -v -e "bridge" -e "host" -e "none" | xargs -r docker network rm
 
-# Remove all dangling images locally and system-wide
+	# Remove all dangling images locally and system-wide
 	@docker image prune -f
 	@docker system prune -a -f
 	@docker builder prune -a -f
@@ -118,7 +116,7 @@ all: nucleobits
 
 dev-all: docker-build
 
-nucleobits: helloworld.pb.o helloworld.grpc.pb.o nucleobits.o
+nucleobits: service.pb.o service.grpc.pb.o server.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 # Phony targets

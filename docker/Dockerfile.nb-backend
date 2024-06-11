@@ -1,0 +1,2 @@
+FROM nucleobits-backend-grpc-image:latest
+
